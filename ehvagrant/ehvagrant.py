@@ -2,21 +2,19 @@
 """Vagrant Manager.
 
 Usage:
-  cm-vagrant.py vagrant create --vms=<vmlist> [--box=BOX] [--template=TEMPLATE] [--output=OUTPUT] [--debug]
-  cm-vagrant.py vagrant start [--vms=<vmList>] [--debug]
-  cm-vagrant.py vagrant stop [--vms=<vmList>] [--debug]
-  cm-vagrant.py vagrant suspend [--vms=<vmList>] [--debug]
-  cm-vagrant.py vagrant destroy [--vms=<vmList>] [--debug]
-  cm-vagrant.py vagrant info
-  cm-vagrant.py vagrant ls
-  cm-vagrant.py vagrant upload --from=FROM --to=TO [-r] [--vms=<vmlist>] [--debug]
-  cm-vagrant.py vagrant download --from=FROM --to=TO [-r] [--vms=<vmlist>] [--debug]
-  cm-vagrant.py vagrant ssh NAME [--debug]
-  cm-vagrant.py vagrant run command COMMAND [--vms=<vmList>] [--debug]
-  cm-vagrant.py vagrant run script SCRIPT [--data=PATH] [--vms=<vmList>] [--debug]
-
-
-  cm-vagrant.py -h
+  ehvagrant.py create --vms=<vmlist> [--box=BOX] [--template=TEMPLATE] [--output=OUTPUT] [--debug]
+  ehvagrant.py start [--vms=<vmList>] [--debug]
+  ehvagrant.py stop [--vms=<vmList>] [--debug]
+  ehvagrant.py suspend [--vms=<vmList>] [--debug]
+  ehvagrant.py destroy [--vms=<vmList>] [--debug]
+  ehvagrant.py info
+  ehvagrant.py ls
+  ehvagrant.py upload --from=FROM --to=TO [-r] [--vms=<vmlist>] [--debug]
+  ehvagrant.py download --from=FROM --to=TO [-r] [--vms=<vmlist>] [--debug]
+  ehvagrant.py ssh NAME [--debug]
+  ehvagrant.py run command COMMAND [--vms=<vmList>] [--debug]
+  ehvagrant.py run script SCRIPT [--data=PATH] [--vms=<vmList>] [--debug]
+  ehvagrant.py -h
 
 Options:
   -h --help     Show this screen.
@@ -29,22 +27,15 @@ Example:
    put an example here
 """
 from __future__ import print_function
-import fileinput
+import os
 import re
 import subprocess
-import os
-from docopt import docopt
-from colorama import init
-from termcolor import colored
-import hostlist
 import multiprocessing.dummy as mt
 import queue
 import time
 import logging
-
-# TODO: workspace should be in ~/.cloudmesh/vagrant
-# TODO: if the workspace is not ther it needs to be created
-# TODO: use captal letters as easier to document in other tools
+from docopt import docopt
+import hostlist
 
 
 class Vagrant(object):
@@ -58,12 +49,14 @@ class Vagrant(object):
 
         :param debug:
         """
-        self.workspace = "."
-        self.experiment_path="./experiment"
-#        self.workspace = "../configuration/"
-#        self.experiment_path="../experiment"        
-        self.ssh_config={}
+        # init workspace and related path
+        self.workspace = os.path.join(os.path.expanduser('~'),'ehvagrant',)
+        if os.path.isdir(self.workspace):
+            os.mkdir(self.workspace)            
         self.path = os.path.join(self.workspace, "Vagrantfile")
+        self.experiment_path = os.path.join(self.workspace,'experiment')
+             
+        self.ssh_config={}        
         self.debug = debug
         
         
@@ -487,6 +480,7 @@ class Vagrant(object):
         r=(not os.path.basename(source) or recursive)
         self._scp(name, 'upload', source, dest, r)
 
+
 def process_arguments(arguments):
     """
     TODO: doc
@@ -496,120 +490,106 @@ def process_arguments(arguments):
     """
     debug = arguments["--debug"]
     if debug:
-        try:
-            columns, rows = os.get_terminal_size(0)
-        except OSError:
-            columns, rows = os.get_terminal_size(1)
-
-        print (colored(columns * '=', "red"))
-        print (colored("Running in Debug Mode","red"))
-        print (colored(columns * '=',"red"))
-        print(arguments)
-        print (colored(columns * '-',"red"))
-
         logging.basicConfig(level=logging.DEBUG)        
     else:
         logging.basicConfig(level=logging.INFO)
-
-
-    if arguments.get("vagrant"):        
         
-        provider = Vagrant(debug=debug)
+    provider = Vagrant(debug=debug)
 
-        # parse argument
-        hosts = []
-        action = None
-        kwargs = dict()
-        args= []
-        if arguments.get("create"):
-            action = provider.create
-            kwargs=provider._update_by_key(kwargs, arguments, ['--image','--template'], {'--output':'output_path'})
-        elif arguments.get("start"):
-            action = provider.start
-        elif arguments.get("stop"):
-            action = provider.stop
-        elif arguments.get("suspend"):
-            action = provider.suspend
-        elif arguments.get("destroy"):
-            action = provider.destroy
-        elif arguments.get("info"):
-            action = provider.status
-        elif arguments.get("download"):
-            action = provider.download
-            args.append(arguments.get("FROM"))
-            args.append(arguments.get("TO"))
-            kwargs = provider._update_by_key(kwargs, arguments, key_dict={'-r':'recursive'})
-        elif arguments.get("upload"):
-            action = provider.upload
-            args.append(arguments.get("FROM"))
-            args.append(arguments.get("TO"))
-            kwargs = provider._update_by_key(kwargs, arguments, key_dict={'-r':'recursive'})
-        elif arguments.get("ssh"):
-            action = provider.ssh
-            args.append(arguments.get("NAME"))
-        elif arguments.get("run") and arguments.get("command"):
-            action = provider.run_command
-            args.append(arguments.get("COMMAND"))
-        elif arguments.get("run") and arguments.get("script"):
-            action = provider.run_script
-            args.append(arguments.get("SCRIPT"))
-            kwargs = provider._update_by_key(kwargs, arguments,['--data'])
-                        
-        # do the action
-        if action is not None:
-            
-            action_type = action.__name__   
-            
-            # aciton that has immediately execute       
-            if action_type in ['ssh']:
-                action(*args, **kwargs)
-                return             
-            
-            # parse vms_hosts 
-            if arguments.get("--vms"):
-                vms_hosts = arguments.get("--vms")
-                vms_hosts = hostlist.expand_hostlist(vms_hosts)
-            else:
-                vms_hosts=[]
+    # parse argument
+    hosts = []
+    action = None
+    kwargs = dict()
+    args= []
+    if arguments.get("create"):
+        action = provider.create
+        kwargs=provider._update_by_key(kwargs, arguments, ['--image','--template'], {'--output':'output_path'})
+    elif arguments.get("start"):
+        action = provider.start
+    elif arguments.get("stop"):
+        action = provider.stop
+    elif arguments.get("suspend"):
+        action = provider.suspend
+    elif arguments.get("destroy"):
+        action = provider.destroy
+    elif arguments.get("info"):
+        action = provider.status
+    elif arguments.get("download"):
+        action = provider.download
+        args.append(arguments.get("FROM"))
+        args.append(arguments.get("TO"))
+        kwargs = provider._update_by_key(kwargs, arguments, key_dict={'-r':'recursive'})
+    elif arguments.get("upload"):
+        action = provider.upload
+        args.append(arguments.get("FROM"))
+        args.append(arguments.get("TO"))
+        kwargs = provider._update_by_key(kwargs, arguments, key_dict={'-r':'recursive'})
+    elif arguments.get("ssh"):
+        action = provider.ssh
+        args.append(arguments.get("NAME"))
+    elif arguments.get("run") and arguments.get("command"):
+        action = provider.run_command
+        args.append(arguments.get("COMMAND"))
+    elif arguments.get("run") and arguments.get("script"):
+        action = provider.run_script
+        args.append(arguments.get("SCRIPT"))
+        kwargs = provider._update_by_key(kwargs, arguments,['--data'])
+                    
+    # do the action
+    if action is not None:
+        
+        action_type = action.__name__   
+        
+        # aciton that has immediately execute       
+        if action_type in ['ssh']:
+            action(*args, **kwargs)
+            return             
+        
+        # parse vms_hosts 
+        if arguments.get("--vms"):
+            vms_hosts = arguments.get("--vms")
+            vms_hosts = hostlist.expand_hostlist(vms_hosts)
+        else:
+            vms_hosts=[]
 
-            #action with vms_hosts                                   
-            if action_type in ['create']:
-                args.append(vms_hosts)
-                action(*args, **kwargs)
-                return                         
-            elif action_type in ['start','stop','destroy','info','suspend'] and not vms_hosts:
-                action()
-                return
-            
-            # impute hosts
-            if not vms_hosts:
-                hosts = provider._get_host_names()
-                if not hosts:
-                    raise EnvironmentError('There is no host exists in the current vagrant project')
-            else:
-                hosts = vms_hosts                                            
-    
-            # action work with host                    
-            if action_type in ['start','stop','destroy','info','suspend']:
-                for node_name in hosts:
-                    action(node_name)                
-            else:
-                # impute argument according to number of host
-                if len(hosts)>1:
-                    if action_type in ['run_command','run_script']:
-                        kwargs.update({'report_alone':False})                             
-                    if action_type in ['run_script, download']:
-                        kwargs.update({'prefix_dest':True})                        
-                        
-                    provider.run_parallel(hosts, action, args, kwargs)                        
+        #action with vms_hosts                                   
+        if action_type in ['create']:
+            args.append(vms_hosts)
+            action(*args, **kwargs)
+            return                         
+        elif action_type in ['start','stop','destroy','info','suspend'] and not vms_hosts:
+            action()
+            return
+        
+        # impute hosts
+        if not vms_hosts:
+            hosts = provider._get_host_names()
+            if not hosts:
+                raise EnvironmentError('There is no host exists in the current vagrant project')
+        else:
+            hosts = vms_hosts                                            
+
+        # action work with host                    
+        if action_type in ['start','stop','destroy','info','suspend']:
+            for node_name in hosts:
+                action(node_name)                
+        else:
+            # impute argument according to number of host
+            if len(hosts)>1:
+                if action_type in ['run_command','run_script']:
+                    kwargs.update({'report_alone':False})                             
+                if action_type in ['run_script, download']:
+                    kwargs.update({'prefix_dest':True})                        
                     
-                else:
-                    if action_type in ['run_command','run_script']:
-                        kwargs.update({'report_alone':True})                             
-                    if action_type in ['run_script, download']:
-                        kwargs.update({'prefix_dest':False})                        
-                    
-                    action(hosts[0], *args, **kwargs)                   
+                provider.run_parallel(hosts, action, args, kwargs)                        
+                
+            else:
+                if action_type in ['run_command','run_script']:
+                    kwargs.update({'report_alone':True})                             
+                if action_type in ['run_script, download']:
+                    kwargs.update({'prefix_dest':False})                        
+                
+                action(hosts[0], *args, **kwargs)                   
                    
 #%%
 def main():
