@@ -7,7 +7,7 @@ Usage:
   ehvagrant.py stop [--vms=<vmList>] [--debug]
   ehvagrant.py suspend [--vms=<vmList>] [--debug]
   ehvagrant.py destroy [--vms=<vmList>] [--debug]
-  ehvagrant.py info
+  ehvagrant.py info [--debug]
   ehvagrant.py ls
   ehvagrant.py upload --from=FROM --to=TO [-r] [--vms=<vmlist>] [--debug]
   ehvagrant.py download --from=FROM --to=TO [-r] [--vms=<vmlist>] [--debug]
@@ -49,13 +49,18 @@ class Vagrant(object):
 
         :param debug:
         """
-        # init workspace and related path
-        self.workspace = os.path.join(os.path.expanduser('~'),'ehvagrant',)
-        if os.path.isdir(self.workspace):
-            os.mkdir(self.workspace)            
+        # set workspace and related path
+        if not os.getenv('EHVAGRANT_HOME'):
+            self.workspace = os.path.join(os.path.expanduser('~'),'ehvagrant',)
+        else:
+            self.workspace =  os.getenv('EHVAGRANT_HOME')
         self.path = os.path.join(self.workspace, "Vagrantfile")
         self.experiment_path = os.path.join(self.workspace,'experiment')
-             
+  
+        if not os.path.isdir(self.workspace):
+            os.mkdir(self.workspace)
+            self.create(['node1','node2'])
+                         
         self.ssh_config={}        
         self.debug = debug
         
@@ -513,7 +518,7 @@ def process_arguments(arguments):
     elif arguments.get("destroy"):
         action = provider.destroy
     elif arguments.get("info"):
-        action = provider.status
+        action = provider.info
     elif arguments.get("download"):
         action = provider.download
         args.append(arguments.get("FROM"))

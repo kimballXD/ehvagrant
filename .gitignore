@@ -1,0 +1,10 @@
+
+# setuptools
+bin/
+dist/
+ehvagrant.egg-info
+
+# temp/cache file
+**/*.pyc
+**/*.swp
+**/__pycache__
