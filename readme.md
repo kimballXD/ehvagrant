@@ -47,7 +47,7 @@ You can download Vagrant from [here](https://www.vagrantup.com/downloads.html). 
 
 ### 3. Install *virtualization provider*
 
-Although Vagrant *help* you with virtual machine managements, Vagrant does not *handle* the task of virtualization itself. Vagrant rely on virtualization software or even cloud service provider to do the actual work of *virtualization*. In other word, to leverage Vagrant functionality**, you need to install Vagrant along with *virtualization provider* and/or the correspondent t *Vagrant plugin*** that enables Vagrant to interact with the virtualization provider.
+Although Vagrant *help* you with virtual machine managements, Vagrant does not *handle* the task of virtualization itself. Vagrant rely on virtualization software or even cloud service provider to do the actual work of *virtualization*. In other word, to leverage Vagrant functionality**, you need to install Vagrant along with *virtualization provider* and/or the correspondent *Vagrant plugin*** that enables Vagrant to interact with the virtualization provider.
 
 The default virtualization provider of Vagrant is [VirtualBox](https://www.virtualbox.org/). You don't have to install any plugin to let Vagrant work with VirtualBox. However, you need to install VirtualBox if it don't exist on your host computer. In this case, please refer to [VirtualBox downloand page](https://www.virtualbox.org/wiki/Downloads). Also, please note that using VirtualBox as the virtualization provider implies the virtual machines you manages through Vagrant will run on your host machine. So make sure there are sufficient resources on your host machine for the virtual machines to use. 
 
